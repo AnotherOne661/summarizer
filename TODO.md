@@ -1,2 +1,1 @@
 - Multilanguage
-- .env to change LLM model

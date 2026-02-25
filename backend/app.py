@@ -19,7 +19,7 @@ app = FastAPI(title="PDF Summarizer RAG v2", version="2.1")
 # Configuración
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-UPLOAD_FOLDER = "/app/uploads"
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/app/uploads")  # Valor por defecto para Docker
 COLLECTION_NAME = "pdf_documents"
 
 rag = get_rag_engine()

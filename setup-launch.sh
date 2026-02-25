@@ -151,42 +151,62 @@ pip install -r backend/requirements.txt
 print_success "Dependencias de Python instaladas"
 
 # =========================================
-# PASO 6: Configurar frontend
+# PASO 6: Configurar frontend (Node.js y dependencias)
 # =========================================
 print_step "Configurando frontend..."
 
-# Verificar si Node.js está instalado
+# Verificar si Node.js está instalado y es versión 20+
 if ! command -v node &> /dev/null; then
-    print_step "Instalando Node.js..."
+    print_step "Instalando Node.js 20..."
     if [ "$OS" = "debian" ]; then
-        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
         sudo apt install -y nodejs
     elif [ "$OS" = "redhat" ]; then
-        curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+        curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
         sudo yum install -y nodejs
     elif [ "$OS" = "macos" ]; then
-        brew install node@18
+        brew install node@20
     fi
-    print_success "Node.js instalado"
+else
+    NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_VERSION" -lt 20 ]; then
+        print_warning "Node.js versión $NODE_VERSION detectada. Se requiere versión 20+"
+        print_step "Actualizando a Node.js 20..."
+        if [ "$OS" = "debian" ]; then
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt install -y nodejs
+        elif [ "$OS" = "redhat" ]; then
+            curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+            sudo yum install -y nodejs
+        elif [ "$OS" = "macos" ]; then
+            brew upgrade node@20
+        fi
+    fi
 fi
 
+print_success "Node.js $(node -v) instalado"
+
 # Instalar dependencias del frontend
+print_step "Instalando dependencias del frontend (npm install)..."
 cd frontend
 npm install
+if [ $? -ne 0 ]; then
+    print_error "Error al instalar dependencias del frontend"
+    exit 1
+fi
 cd ..
-
-print_success "Frontend configurado"
+print_success "Dependencias del frontend instaladas"
 
 # =========================================
-# PASO 7: Crear archivos de configuración
+# PASO 7: Crear archivos de configuración y carpetas necesarias
 # =========================================
-print_step "Creando archivos de configuración..."
+print_step "Creando archivos de configuración y carpetas..."
 
-# Backend .env
+# Backend .env para entorno local (con ruta relativa)
 cat > backend/.env << EOF
+UPLOAD_FOLDER=./uploads
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2:3b
-UPLOAD_FOLDER=./uploads
 EOF
 
 # Frontend .env.local
@@ -194,13 +214,15 @@ cat > frontend/.env.local << EOF
 NEXT_PUBLIC_API_URL=http://localhost:8000
 EOF
 
-# Crear carpeta de uploads
+# Crear carpetas necesarias
 mkdir -p backend/uploads
+mkdir -p backend/chroma_data
+chmod 755 backend/uploads backend/chroma_data 2>/dev/null
 
-print_success "Archivos de configuración creados"
+print_success "Archivos de configuración y carpetas creados"
 
 # =========================================
-# PASO 8: Crear script para ejecutar todo
+# PASO 8: Crear script de ejecución (run_local.sh)
 # =========================================
 print_step "Creando script de ejecución..."
 
@@ -210,6 +232,8 @@ cat > run_local.sh << 'EOF'
 # Colores
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${BLUE}=========================================${NC}"
@@ -217,10 +241,31 @@ echo -e "${GREEN}🚀 Iniciando Resumidor de PDF con IA${NC}"
 echo -e "${BLUE}=========================================${NC}"
 echo ""
 
+# Verificar que el frontend tiene dependencias instaladas
+if [ ! -d "frontend/node_modules" ]; then
+    echo -e "${RED}❌ Error: frontend/node_modules no encontrado. Ejecuta primero ./setup_and_run.sh${NC}"
+    exit 1
+fi
+
+# Cargar variables de entorno del backend
+if [ -f backend/.env ]; then
+    echo -e "${BLUE}📦 Cargando configuración desde backend/.env${NC}"
+    export $(grep -v '^#' backend/.env | xargs)
+else
+    echo -e "${YELLOW}⚠️  No se encontró backend/.env, usando valores por defecto${NC}"
+    export UPLOAD_FOLDER="./uploads"
+    export OLLAMA_URL="http://localhost:11434"
+    export OLLAMA_MODEL="llama3.2:3b"
+fi
+
+# Crear carpeta de uploads si no existe
+mkdir -p "$UPLOAD_FOLDER"
+chmod 755 "$UPLOAD_FOLDER" 2>/dev/null
+
 # Función para matar procesos al salir
 cleanup() {
     echo ""
-    echo "🛑 Deteniendo servicios..."
+    echo -e "${YELLOW}🛑 Deteniendo servicios...${NC}"
     kill $BACKEND_PID 2>/dev/null
     kill $FRONTEND_PID 2>/dev/null
     exit 0
@@ -232,7 +277,7 @@ trap cleanup SIGINT SIGTERM
 source venv/bin/activate
 
 # Iniciar backend
-echo "📦 Iniciando backend en http://localhost:8000"
+echo -e "${BLUE}📦 Iniciando backend en http://localhost:8000${NC}"
 cd backend
 uvicorn app:app --reload --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
@@ -242,7 +287,7 @@ cd ..
 sleep 3
 
 # Iniciar frontend
-echo "🎨 Iniciando frontend en http://localhost:3000"
+echo -e "${BLUE}🎨 Iniciando frontend en http://localhost:3000${NC}"
 cd frontend
 npm run dev &
 FRONTEND_PID=$!
@@ -250,10 +295,11 @@ cd ..
 
 echo ""
 echo -e "${GREEN}✅ Servicios iniciados correctamente${NC}"
-echo "📊 Backend:  http://localhost:8000"
-echo "🌐 Frontend: http://localhost:3000"
+echo -e "📊 Backend:  http://localhost:8000"
+echo -e "🌐 Frontend: http://localhost:3000"
+echo -e "📚 API Docs: http://localhost:8000/docs"
 echo ""
-echo "Presiona Ctrl+C para detener todos los servicios"
+echo -e "${YELLOW}Presiona Ctrl+C para detener todos los servicios${NC}"
 echo ""
 
 # Esperar a que los procesos terminen
@@ -285,9 +331,10 @@ echo "   - backend/chroma_data/: Base de datos vectorial"
 echo "   - frontend/: Aplicación Next.js"
 echo ""
 echo "⚠️  IMPORTANTE:"
-echo "   1. Asegúrate de que el puerto 8000 y 3000 estén libres"
+echo "   1. Asegúrate de que los puertos 8000 y 3000 estén libres"
 echo "   2. Para detener: Ctrl+C en la terminal donde corra run_local.sh"
 echo "   3. Los PDFs subidos se guardan en backend/uploads/"
 echo ""
 
+# Hacer ejecutable el script principal (por si acaso)
 chmod +x setup_and_run.sh
