@@ -1,7 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Download, Upload, FileText, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { 
+  Download, Upload, FileText, Loader2, 
+  Moon, Sun, MessageSquare, CheckCircle, 
+  AlertCircle, BookOpen, Sparkles 
+} from 'lucide-react';
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,7 +18,24 @@ export default function Home() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingQuestion, setLoadingQuestion] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'upload' | 'summary' | 'qa'>('upload');
+  const [darkMode, setDarkMode] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Detectar preferencia del sistema para modo oscuro
+  useEffect(() => {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.documentElement.classList.toggle('dark');
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -32,6 +53,7 @@ export default function Home() {
 
     setLoading(true);
     setError('');
+    setSuccess(false);
     
     const formData = new FormData();
     formData.append('file', file);
@@ -50,8 +72,12 @@ export default function Home() {
       
       setFileId(data.file_id);
       setFilename(data.filename);
-      setActiveTab('summary');
-      alert("PDF subido correctamente. Pendiente hacer un modal")      
+      setSuccess(true);
+      setShowSuccessModal(true);
+      
+      // Cerrar modal automáticamente después de 3 segundos
+      setTimeout(() => setShowSuccessModal(false), 3000);
+      
     } catch (error) {
       console.error('Error:', error);
       setError(error instanceof Error ? error.message : 'Error al procesar el PDF');
@@ -135,85 +161,127 @@ export default function Home() {
     a.click();
     URL.revokeObjectURL(url);
   };
+return (
+    <main className="min-h-screen bg-stone-50 dark:bg-zinc-950 transition-colors duration-300">
+      {/* Modal de éxito */}
+      {showSuccessModal && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className="bg-white dark:bg-zinc-900 border-l-4 border-emerald-500 rounded shadow-xl p-4 flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 text-emerald-600" />
+            <p className="text-zinc-800 dark:text-zinc-200 font-medium">PDF subido correctamente</p>
+          </div>
+        </div>
+      )}
 
-  return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          Resumidor de PDF con IA
-        </h1>
+      <div className="max-w-5xl mx-auto px-4 py-12">
+        {/* Header con título y botón de tema */}
+        <div className="flex justify-between items-end mb-12 border-b border-stone-200 dark:border-zinc-800 pb-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-zinc-900 dark:bg-zinc-100 rounded-lg">
+              <FileText className="w-8 h-8 text-white dark:text-zinc-900" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-serif font-bold text-zinc-900 dark:text-zinc-50">
+                Lector Inteligente
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-1 italic">
+                Análisis y síntesis de documentos PDF
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={toggleDarkMode}
+            className="p-2.5 hover:bg-stone-200 dark:hover:bg-zinc-800 rounded-full transition-all border border-stone-200 dark:border-zinc-800"
+            aria-label="Cambiar tema"
+          >
+            {darkMode ? (
+              <Sun className="w-5 h-5 text-orange-300" />
+            ) : (
+              <Moon className="w-5 h-5 text-zinc-600" />
+            )}
+          </button>
+        </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        {/* Tabs con diseño minimalista */}
+        <div className="flex gap-8 mb-8 border-b border-stone-200 dark:border-zinc-800">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`px-4 py-2 rounded-lg ${
+            className={`pb-4 px-2 font-medium transition-all relative ${
               activeTab === 'upload' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-200 text-gray-700'
+                ? 'text-indigo-600 dark:text-indigo-400 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-indigo-600' 
+                : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
             }`}
           >
-             Subir PDF
+            Subir Archivo
           </button>
           <button
             onClick={() => setActiveTab('summary')}
             disabled={!fileId}
-            className={`px-4 py-2 rounded-lg ${
+            className={`pb-4 px-2 font-medium transition-all relative ${
               activeTab === 'summary' && fileId
-                ? 'bg-blue-600 text-white' 
-                : fileId 
-                  ? 'bg-gray-200 text-gray-700' 
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                ? 'text-indigo-600 dark:text-indigo-400 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-indigo-600' 
+                : 'text-zinc-400 cursor-not-allowed'
             }`}
           >
-            Resumen
+            Resumen Editorial
           </button>
           <button
             onClick={() => setActiveTab('qa')}
             disabled={!fileId}
-            className={`px-4 py-2 rounded-lg ${
+            className={`pb-4 px-2 font-medium transition-all relative ${
               activeTab === 'qa' && fileId
-                ? 'bg-blue-600 text-white' 
-                : fileId 
-                  ? 'bg-gray-200 text-gray-700' 
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                ? 'text-indigo-600 dark:text-indigo-400 after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-indigo-600' 
+                : 'text-zinc-400 cursor-not-allowed'
             }`}
           >
-           Preguntas
+            Consultas
           </button>
         </div>
 
         {/* Error message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-lg flex items-start gap-3 animate-fade-in">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-800 dark:text-red-400 font-medium">{error}</p>
           </div>
         )}
 
         {/* Tab: Upload */}
         {activeTab === 'upload' && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm p-10 border border-stone-200 dark:border-zinc-800">
             <form onSubmit={handleUpload}>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileChange}
-                  className="mb-4"
-                />
-                {file && (
-                  <p className="text-sm text-gray-600">
-                    Archivo: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+              <div className="border-2 border-dashed border-stone-200 dark:border-zinc-800 rounded-xl p-16 text-center hover:border-indigo-300 dark:hover:border-indigo-900 transition-colors bg-stone-50/50 dark:bg-zinc-950/50">
+                <Upload className="mx-auto h-12 w-12 text-stone-400 dark:text-zinc-600 mb-4" />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <p className="text-xl font-medium text-zinc-800 dark:text-zinc-200">
+                    {file ? file.name : 'Seleccione un documento PDF'}
                   </p>
-                )}
+                  <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2">
+                    {file 
+                      ? `${(file.size / 1024 / 1024).toFixed(2)} MB` 
+                      : 'Máximo 50MB para procesamiento profundo'}
+                  </p>
+                </div>
               </div>
               <button
                 type="submit"
                 disabled={!file || loading}
-                className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                className="mt-8 w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 py-4 px-6 rounded-lg font-semibold hover:bg-zinc-800 dark:hover:bg-white disabled:bg-stone-300 dark:disabled:bg-zinc-800 transition-all"
               >
-                {loading ? 'Subiendo...' : 'Subir PDF'}
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Procesando...
+                  </span>
+                ) : (
+                  'Importar Documento'
+                )}
               </button>
             </form>
           </div>
@@ -221,75 +289,107 @@ export default function Home() {
 
         {/* Tab: Summary */}
         {activeTab === 'summary' && fileId && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Resumen</h2>
-              <div className="flex gap-2">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm p-10 border border-stone-200 dark:border-zinc-800">
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="text-2xl font-serif font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+                <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                Resumen Ejecutivo
+              </h2>
+              <div className="flex gap-4">
                 {summary && (
                   <button
                     onClick={handleDownloadTxt}
-                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                    className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 border border-stone-200 dark:border-zinc-800 px-4 py-2 rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Descargar
+                    Exportar
                   </button>
                 )}
                 <button
                   onClick={handleGenerateSummary}
                   disabled={loadingSummary}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg disabled:bg-stone-300 transition-colors"
                 >
                   {loadingSummary ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Generando...
-                    </>
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    'Generar Resumen'
+                    <Sparkles className="w-4 h-4" />
                   )}
+                  {summary ? 'Actualizar' : 'Generar Lectura'}
                 </button>
               </div>
             </div>
-            {summary ? (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="whitespace-pre-wrap">{summary}</p>
+
+            {loadingSummary && !summary && (
+              <div className="py-20 text-center">
+                <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-indigo-600" />
+                <p className="text-zinc-500 font-serif italic">Redactando síntesis...</p>
               </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">
-                Haz clic en "Generar Resumen" para obtener un resumen del documento.
-              </p>
+            )}
+
+            {summary ? (
+              <div className="max-w-3xl mx-auto">
+                <div className="prose dark:prose-invert max-w-none">
+                  <p className="text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap leading-relaxed font-serif text-lg">
+                    {summary}
+                  </p>
+                </div>
+                <div className="mt-8 pt-8 border-t border-stone-100 dark:border-zinc-800 flex justify-end gap-6 text-xs uppercase tracking-widest text-zinc-400">
+                  <span>{summary.split(' ').length} palabras</span>
+                  <span>{summary.length} caracteres</span>
+                </div>
+              </div>
+            ) : !loadingSummary && (
+              <div className="py-20 text-center border-2 border-dotted border-stone-100 dark:border-zinc-800 rounded-xl">
+                <p className="text-stone-400 italic">Listo para generar el análisis del documento.</p>
+              </div>
             )}
           </div>
         )}
 
         {/* Tab: Questions */}
         {activeTab === 'qa' && fileId && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-4">Preguntas</h2>
-            <form onSubmit={handleAskQuestion} className="mb-6">
-              <div className="flex gap-2">
+          <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm p-10 border border-stone-200 dark:border-zinc-800">
+            <h2 className="text-2xl font-serif font-bold text-zinc-900 dark:text-white flex items-center gap-3 mb-8">
+              <MessageSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              Consulta Directa
+            </h2>
+
+            <form onSubmit={handleAskQuestion} className="mb-10">
+              <div className="flex gap-2 p-1 bg-stone-100 dark:bg-zinc-950 rounded-xl border border-stone-200 dark:border-zinc-800">
                 <input
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ej: ¿De qué trata el libro?"
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2"
+                  placeholder="¿Cuál es la tesis principal del texto?"
+                  className="flex-1 px-4 py-3 bg-transparent text-zinc-900 dark:text-white focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!question.trim() || loadingQuestion}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="bg-zinc-900 dark:bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-zinc-800 transition-colors"
                 >
-                  {loadingQuestion ? 'Enviando...' : 'Preguntar'}
+                  {loadingQuestion ? 'Buscando...' : 'Consultar'}
                 </button>
               </div>
             </form>
+
             {answer && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="font-semibold mb-2">Respuesta:</p>
-                <p>{answer}</p>
+              <div className="bg-stone-50 dark:bg-zinc-950 rounded-lg p-8 border-l-4 border-indigo-500 animate-fade-in">
+                <p className="text-zinc-800 dark:text-zinc-200 leading-relaxed text-lg">
+                  {answer}
+                </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Footer */}
+        {fileId && (
+          <div className="mt-12 text-center">
+            <span className="text-xs uppercase tracking-[0.2em] text-stone-400 dark:text-zinc-600">
+              Archivo en memoria: <span className="text-zinc-600 dark:text-zinc-400">{filename}</span>
+            </span>
           </div>
         )}
       </div>
