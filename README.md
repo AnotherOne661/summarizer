@@ -63,7 +63,7 @@ deploy:
 
 ### 1. Clone the repository
 ```bash
-git clone <your-repository>
+git clone <this-repository>
 cd summarizer
 ```
 ### 2. Run the automatic installation script
