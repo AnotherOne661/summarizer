@@ -7,7 +7,7 @@ from typing import List, Dict, Any, Optional
 import re
 
 class RAGEngine:
-    """Motor RAG con ChromaDB y embeddings multilingües"""
+    """RAG Engine with ChromaDB and multilingual embeddings"""
     
     def __init__(self, persist_directory: str = "./chroma_data"):
         os.makedirs(persist_directory, exist_ok=True)
@@ -17,10 +17,10 @@ class RAGEngine:
             settings=Settings(anonymized_telemetry=False)
         )
         
-        print(" Cargando modelo de embeddings (multilingüe)...")
-        # Modelo robusto para español/inglés con buena tolerancia a ruido OCR
+        print(" Loading embedding model (multilingual)...")
+        # Robust model for Spanish/English with good tolerance to OCR noise
         self.embedder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-        print("✓ Modelo de embeddings listo")
+        print("✓ Embedding model ready")
         
         self.collections = {}
     
@@ -70,7 +70,7 @@ class RAGEngine:
             documents=documents
         )
         
-        print(f"✓ {len(chunks)} chunks añadidos a '{collection_name}'")
+        print(f"✓ {len(chunks)} chunks added to '{collection_name}'")
         return len(chunks)
     
     def find_relevant_chunks(self, collection_name: str, query: str,

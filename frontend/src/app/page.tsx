@@ -23,7 +23,7 @@ export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // Detectar preferencia del sistema para modo oscuro
+  // Detect system preference for dark mode
   useEffect(() => {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setDarkMode(isDark);
@@ -47,7 +47,7 @@ export default function Home() {
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      setError('Por favor, selecciona un archivo PDF');
+      setError('Please select a PDF file');
       return;
     }
 
@@ -67,7 +67,7 @@ export default function Home() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.detail || 'Error al subir el PDF');
+        throw new Error(data.detail || 'Error uploading PDF');
       }
       
       setFileId(data.file_id);
@@ -75,12 +75,12 @@ export default function Home() {
       setSuccess(true);
       setShowSuccessModal(true);
       
-      // Cerrar modal automáticamente después de 3 segundos
+      // Close modal automatically after 3 seconds
       setTimeout(() => setShowSuccessModal(false), 3000);
       
     } catch (error) {
       console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'Error al procesar el PDF');
+      setError(error instanceof Error ? error.message : 'Error processing PDF');
     } finally {
       setLoading(false);
     }
@@ -100,14 +100,14 @@ export default function Home() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.detail || 'Error al generar resumen');
+        throw new Error(data.detail || 'Error generating summary');
       }
       
       setSummary(data.summary);
       
     } catch (error) {
       console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'Error al generar el resumen');
+      setError(error instanceof Error ? error.message : 'Error generating summary');
     } finally {
       setLoadingSummary(false);
     }
@@ -137,14 +137,14 @@ export default function Home() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.detail || 'Error al procesar la pregunta');
+        throw new Error(data.detail || 'Error processing question');
       }
       
       setAnswer(data.answer);
       
     } catch (error) {
       console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'Error al procesar la pregunta');
+      setError(error instanceof Error ? error.message : 'Error processing question');
     } finally {
       setLoadingQuestion(false);
     }
@@ -157,24 +157,25 @@ export default function Home() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `resumen_${filename.replace('.pdf', '')}.txt`;
+    a.download = `summary_${filename.replace('.pdf', '')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
-return (
+
+  return (
     <main className="min-h-screen bg-stone-50 dark:bg-zinc-950 transition-colors duration-300">
-      {/* Modal de éxito */}
+      {/* Success modal */}
       {showSuccessModal && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
           <div className="bg-white dark:bg-zinc-900 border-l-4 border-emerald-500 rounded shadow-xl p-4 flex items-center gap-3">
             <CheckCircle className="w-5 h-5 text-emerald-600" />
-            <p className="text-zinc-800 dark:text-zinc-200 font-medium">PDF subido correctamente</p>
+            <p className="text-zinc-800 dark:text-zinc-200 font-medium">PDF uploaded successfully</p>
           </div>
         </div>
       )}
 
       <div className="max-w-5xl mx-auto px-4 py-12">
-        {/* Header con título y botón de tema */}
+        {/* Header with title and theme toggle */}
         <div className="flex justify-between items-end mb-12 border-b border-stone-200 dark:border-zinc-800 pb-8">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-zinc-900 dark:bg-zinc-100 rounded-lg">
@@ -182,17 +183,17 @@ return (
             </div>
             <div>
               <h1 className="text-4xl font-serif font-bold text-zinc-900 dark:text-zinc-50">
-                Lector Inteligente
+                Smart Reader
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400 mt-1 italic">
-                Análisis y síntesis de documentos PDF
+                PDF document analysis and synthesis
               </p>
             </div>
           </div>
           <button
             onClick={toggleDarkMode}
             className="p-2.5 hover:bg-stone-200 dark:hover:bg-zinc-800 rounded-full transition-all border border-stone-200 dark:border-zinc-800"
-            aria-label="Cambiar tema"
+            aria-label="Toggle theme"
           >
             {darkMode ? (
               <Sun className="w-5 h-5 text-orange-300" />
@@ -202,7 +203,7 @@ return (
           </button>
         </div>
 
-        {/* Tabs con diseño minimalista */}
+        {/* Minimalist tabs */}
         <div className="flex gap-8 mb-8 border-b border-stone-200 dark:border-zinc-800">
           <button
             onClick={() => setActiveTab('upload')}
@@ -212,7 +213,7 @@ return (
                 : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
             }`}
           >
-            Subir Archivo
+            Upload File
           </button>
           <button
             onClick={() => setActiveTab('summary')}
@@ -223,7 +224,7 @@ return (
                 : 'text-zinc-400 cursor-not-allowed'
             }`}
           >
-            Resumen Editorial
+            Executive Summary
           </button>
           <button
             onClick={() => setActiveTab('qa')}
@@ -234,7 +235,7 @@ return (
                 : 'text-zinc-400 cursor-not-allowed'
             }`}
           >
-            Consultas
+            Queries
           </button>
         </div>
 
@@ -260,12 +261,12 @@ return (
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   />
                   <p className="text-xl font-medium text-zinc-800 dark:text-zinc-200">
-                    {file ? file.name : 'Seleccione un documento PDF'}
+                    {file ? file.name : 'Select a PDF document'}
                   </p>
                   <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2">
                     {file 
                       ? `${(file.size / 1024 / 1024).toFixed(2)} MB` 
-                      : 'Máximo 50MB para procesamiento profundo'}
+                      : 'Up to 50MB for deep processing'}
                   </p>
                 </div>
               </div>
@@ -277,10 +278,10 @@ return (
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Procesando...
+                    Processing...
                   </span>
                 ) : (
-                  'Importar Documento'
+                  'Import Document'
                 )}
               </button>
             </form>
@@ -293,7 +294,7 @@ return (
             <div className="flex justify-between items-center mb-10">
               <h2 className="text-2xl font-serif font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                 <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-                Resumen Ejecutivo
+                Executive Summary
               </h2>
               <div className="flex gap-4">
                 {summary && (
@@ -302,7 +303,7 @@ return (
                     className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 border border-stone-200 dark:border-zinc-800 px-4 py-2 rounded-lg transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Exportar
+                    Export
                   </button>
                 )}
                 <button
@@ -315,7 +316,7 @@ return (
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  {summary ? 'Actualizar' : 'Generar Lectura'}
+                  {summary ? 'Refresh' : 'Generate Summary'}
                 </button>
               </div>
             </div>
@@ -323,7 +324,7 @@ return (
             {loadingSummary && !summary && (
               <div className="py-20 text-center">
                 <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-indigo-600" />
-                <p className="text-zinc-500 font-serif italic">Redactando síntesis...</p>
+                <p className="text-zinc-500 font-serif italic">Drafting summary...</p>
               </div>
             )}
 
@@ -335,13 +336,13 @@ return (
                   </p>
                 </div>
                 <div className="mt-8 pt-8 border-t border-stone-100 dark:border-zinc-800 flex justify-end gap-6 text-xs uppercase tracking-widest text-zinc-400">
-                  <span>{summary.split(' ').length} palabras</span>
-                  <span>{summary.length} caracteres</span>
+                  <span>{summary.split(' ').length} words</span>
+                  <span>{summary.length} characters</span>
                 </div>
               </div>
             ) : !loadingSummary && (
               <div className="py-20 text-center border-2 border-dotted border-stone-100 dark:border-zinc-800 rounded-xl">
-                <p className="text-stone-400 italic">Listo para generar el análisis del documento.</p>
+                <p className="text-stone-400 italic">Ready to generate document analysis.</p>
               </div>
             )}
           </div>
@@ -352,7 +353,7 @@ return (
           <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm p-10 border border-stone-200 dark:border-zinc-800">
             <h2 className="text-2xl font-serif font-bold text-zinc-900 dark:text-white flex items-center gap-3 mb-8">
               <MessageSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              Consulta Directa
+              Direct Query
             </h2>
 
             <form onSubmit={handleAskQuestion} className="mb-10">
@@ -361,7 +362,7 @@ return (
                   type="text"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="¿Cuál es la tesis principal del texto?"
+                  placeholder="What is the main thesis of the text?"
                   className="flex-1 px-4 py-3 bg-transparent text-zinc-900 dark:text-white focus:outline-none"
                 />
                 <button
@@ -369,7 +370,7 @@ return (
                   disabled={!question.trim() || loadingQuestion}
                   className="bg-zinc-900 dark:bg-indigo-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-zinc-800 transition-colors"
                 >
-                  {loadingQuestion ? 'Buscando...' : 'Consultar'}
+                  {loadingQuestion ? 'Searching...' : 'Ask'}
                 </button>
               </div>
             </form>
@@ -388,7 +389,7 @@ return (
         {fileId && (
           <div className="mt-12 text-center">
             <span className="text-xs uppercase tracking-[0.2em] text-stone-400 dark:text-zinc-600">
-              Archivo en memoria: <span className="text-zinc-600 dark:text-zinc-400">{filename}</span>
+              File in memory: <span className="text-zinc-600 dark:text-zinc-400">{filename}</span>
             </span>
           </div>
         )}

@@ -16,55 +16,55 @@ from rag_engine import get_rag_engine
 
 app = FastAPI(title="PDF Summarizer RAG v2", version="2.1")
 
-# Configuración
+# Configuration
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/app/uploads")  # Valor por defecto para Docker
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "/app/uploads")  # Default for Docker
 COLLECTION_NAME = "pdf_documents"
 
 rag = get_rag_engine()
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ============================================================
-# FUNCIONES AUXILIARES
+# HELPER FUNCTIONS
 # ============================================================
 
 def clean_ocr_text(text: str) -> str:
-    """Limpieza mejorada para OCR con separación de palabras pegadas."""
+    """Enhanced OCR cleaning with word separation."""
     if not text:
         return ""
     
-    # Insertar espacio entre palabra y palabra con mayúscula (ej. "GOODYTWOSHOES.food" -> "GOODYTWOSHOES. food")
+    # Insert space between lowercase and uppercase (e.g., "GOODYTWOSHOES.food" -> "GOODYTWOSHOES. food")
     text = re.sub(r'(?<=[a-záéíóúüñ])(?=[A-ZÁÉÍÓÚÜÑ])', ' ', text)
     text = re.sub(r'(?<=[A-ZÁÉÍÓÚÜÑ])(?=[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ])', ' ', text)
     
-    # Eliminar caracteres no deseados
+    # Remove unwanted characters
     text = re.sub(r'[^\w\s\.\,\;\:\!\?\-\'\"]', ' ', text)
     text = re.sub(r'\s+', ' ', text)
     text = re.sub(r'\.{2,}', '.', text)
     return text.strip()
 
 def ocr_image(image):
-    """OCR con idiomas español e inglés"""
+    """OCR with Spanish and English language support"""
     return pytesseract.image_to_string(image, lang='spa+eng')
 
 async def extract_pdf_chunks(file_path: str, filename: str) -> List[Dict[str, Any]]:
     """
-    Extrae chunks de páginas, aplica limpieza y maneja páginas sin texto.
+    Extract page chunks, apply cleaning, and handle pages without text.
     """
     reader = PdfReader(file_path)
     chunks = []
     
-    print(f"📄 Procesando PDF: {filename} ({len(reader.pages)} páginas)")
+    print(f" Processing PDF: {filename} ({len(reader.pages)} pages)")
     
     for page_num in range(len(reader.pages)):
-        print(f"  Página {page_num + 1}/{len(reader.pages)}")
+        print(f"  Page {page_num + 1}/{len(reader.pages)}")
         page = reader.pages[page_num]
         page_text = page.extract_text()
         
-        # Si no hay texto, aplicar OCR con mayor resolución
+        # If no text, apply OCR with higher resolution
         if not page_text or not page_text.strip():
-            print(f"    ↳ Aplicando OCR...")
+            print(f"    ↳ Applying OCR...")
             images = convert_from_bytes(
                 open(file_path, "rb").read(),
                 first_page=page_num+1,
@@ -83,42 +83,42 @@ async def extract_pdf_chunks(file_path: str, filename: str) -> List[Dict[str, An
                 "page": page_num + 1
             })
         else:
-            # Página sin contenido legible
+            # Page without readable content
             chunks.append({
-                "text": f"[Página {page_num + 1} sin contenido legible]",
+                "text": f"[Page {page_num + 1} without readable content]",
                 "page": page_num + 1
             })
     
-    print(f"✓ PDF procesado: {len(chunks)} chunks generados")
+    print(f"✓ PDF processed: {len(chunks)} chunks generated")
     return chunks
 
 async def generate_with_context(query: str, context_chunks: List[Dict[str, Any]]) -> str:
     """
-    Genera respuesta usando el contexto. Prompt más permisivo para extraer información.
+    Generate response using context. More permissive prompt to extract information.
     """
     if not context_chunks:
-        return "No hay información relevante en el documento."
+        return "No relevant information found in the document."
     
     context_text = "\n\n".join([
-        f"[Página {c['metadata']['page']}]: {c['text']}" 
+        f"[Page {c['metadata']['page']}]: {c['text']}" 
         for c in context_chunks
     ])
     
-    prompt = f"""Eres un asistente que responde preguntas basándote ÚNICAMENTE en el contexto proporcionado.
+    prompt = f"""You are an assistant that answers questions based SOLELY on the provided context.
 
-CONTEXTO (fragmentos del documento):
+CONTEXT (document fragments):
 {context_text}
 
-INSTRUCCIONES:
-- Utiliza la información del contexto para responder a la pregunta.
-- Si el contexto contiene información relevante, responde con ella, indicando la página entre corchetes [Página X].
-- Si el contexto menciona parcialmente el tema, puedes decir "El texto menciona a [tema] en las páginas..." y resumir lo que dice.
-- Si no hay NADA en el contexto que responda a la pregunta, responde "No encuentro esta información en el texto."
-- NO inventes nada que no esté en el contexto.
+INSTRUCTIONS:
+- Use the context information to answer the question.
+- If the context contains relevant information, answer with it, indicating the page in brackets [Page X].
+- If the context partially mentions the topic, you can say "The text mentions [topic] on pages..." and summarize what it says.
+- If there is NOTHING in the context that answers the question, respond with "I couldn't find this information in the text."
+- Do NOT invent anything that is not in the context.
 
-PREGUNTA: {query}
+QUESTION: {query}
 
-RESPUESTA:"""
+ANSWER:"""
 
     timeout = httpx.Timeout(60.0, connect=10.0)
     
@@ -141,35 +141,36 @@ RESPUESTA:"""
             data = resp.json()
             return data.get("response", "").strip()
         except Exception as e:
-            print(f"Error generando respuesta: {e}")
-            return "Error procesando la solicitud con el modelo de IA."
+            print(f"Error generating response: {e}")
+            return "Error processing request with AI model."
+
 # ============================================================
-# ENDPOINTS DE LA API
+# API ENDPOINTS
 # ============================================================
 
 @app.get("/")
 async def root():
     return {
-        "message": "PDF Summarizer API con RAG v2.1",
+        "message": "PDF Summarizer API with RAG v2.1",
         "ollama_model": OLLAMA_MODEL,
         "endpoints": [
-            "/upload - Subir PDF",
-            "/ask - Hacer preguntas",
-            "/summarize/{file_id} - Generar resumen",
-            "/documents - Listar documentos",
-            "/delete/{file_id} - Eliminar documento",
-            "/stats - Estadísticas",
-            "/debug/chunks/{file_id} - Ver chunks",
-            "/debug/search - Probar búsqueda",
-            "/debug/embedding - Probar embeddings",
-            "/debug/extract - Ver extracción"
+            "/upload - Upload PDF",
+            "/ask - Ask questions",
+            "/summarize/{file_id} - Generate summary",
+            "/documents - List documents",
+            "/delete/{file_id} - Delete document",
+            "/stats - Statistics",
+            "/debug/chunks/{file_id} - View chunks",
+            "/debug/search - Test search",
+            "/debug/embedding - Test embeddings",
+            "/debug/extract - View extraction"
         ]
     }
 
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Solo se aceptan archivos PDF")
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted")
     
     file_id = str(uuid.uuid4())
     temp_pdf = os.path.join(UPLOAD_FOLDER, f"{file_id}.pdf")
@@ -182,7 +183,7 @@ async def upload_pdf(file: UploadFile = File(...)):
         chunks = await extract_pdf_chunks(temp_pdf, file.filename)
         
         if not chunks:
-            raise HTTPException(status_code=400, detail="No se pudo extraer texto del PDF")
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF")
         
         num_chunks = rag.add_document_chunks(
             collection_name=COLLECTION_NAME,
@@ -195,7 +196,7 @@ async def upload_pdf(file: UploadFile = File(...)):
             "success": True,
             "file_id": file_id,
             "filename": file.filename,
-            "message": "PDF procesado e indexado correctamente",
+            "message": "PDF processed and indexed successfully",
             "stats": {
                 "chunks": num_chunks,
                 "pages": len(set(c["page"] for c in chunks))
@@ -209,9 +210,9 @@ async def upload_pdf(file: UploadFile = File(...)):
 @app.post("/ask")
 async def ask_question(file_id: str = Form(...), question: str = Form(...)):
     if not question:
-        raise HTTPException(status_code=400, detail="La pregunta no puede estar vacía")
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
     
-    print(f" Pregunta: {question}")
+    print(f" Question: {question}")
     print(f" File ID: {file_id}")
     
     relevant_chunks = rag.find_relevant_chunks(
@@ -224,7 +225,7 @@ async def ask_question(file_id: str = Form(...), question: str = Form(...)):
     if not relevant_chunks:
         return JSONResponse(content={
             "question": question,
-            "answer": "No encontré información relevante en el documento para responder esta pregunta.",
+            "answer": "I couldn't find relevant information in the document to answer this question.",
             "sources": []
         })
     
@@ -247,22 +248,22 @@ async def ask_question(file_id: str = Form(...), question: str = Form(...)):
 
 @app.post("/summarize/{file_id}")
 async def summarize_document(file_id: str):
-    print(f" Generando resumen para: {file_id}")
+    print(f" Generating summary for: {file_id}")
     
     all_chunks = rag.find_relevant_chunks(
         collection_name=COLLECTION_NAME,
-        query="",  # Consulta vacía para recuperar chunks
+        query="",  # Empty query to retrieve all chunks
         top_k=100,
         file_id_filter=file_id
     )
     
     if not all_chunks:
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        raise HTTPException(status_code=404, detail="Document not found")
     
-    # Ordenar por página
+    # Sort by page
     all_chunks.sort(key=lambda x: x["metadata"]["page"])
     
-    # Agrupar en segmentos de tamaño razonable (aprox 2000 caracteres)
+    # Group into segments of reasonable size (approx 2000 characters)
     segments = []
     current_segment = []
     current_length = 0
@@ -280,19 +281,19 @@ async def summarize_document(file_id: str):
     if current_segment:
         segments.append(" ".join(current_segment))
     
-    print(f"  Generando {len(segments)} resúmenes parciales...")
+    print(f"  Generating {len(segments)} partial summaries...")
     
-    # Resumir cada segmento con prompt estricto
+    # Summarize each segment with strict prompt
     summaries = []
     for i, segment in enumerate(segments):
-        print(f"    Segmento {i+1}/{len(segments)}")
+        print(f"    Segment {i+1}/{len(segments)}")
         
-        prompt = f"""Extrae los hechos principales del siguiente fragmento de un libro. Sé conciso y usa SOLO la información presente. NO inventes nombres ni eventos.
+        prompt = f"""Extract the main facts from the following book fragment. Be concise and use ONLY the information present. Do NOT invent names or events.
 
-Fragmento:
+Fragment:
 {segment}
 
-Hechos extraídos:"""
+Extracted facts:"""
         
         timeout = httpx.Timeout(60.0, connect=10.0)
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -306,14 +307,14 @@ Hechos extraídos:"""
             data = resp.json()
             summaries.append(data.get("response", ""))
     
-    # Resumen final combinando
-    print("  Generando resumen final...")
-    combined = "\n\n".join([f"PARTE {i+1}: {s}" for i, s in enumerate(summaries)])
-    final_prompt = f"""A partir de los siguientes resúmenes parciales de un libro (en orden), escribe un resumen final coherente. Si hay información contradictoria, menciónala. NO añadas nada que no esté en los resúmenes.
+    # Final summary combining
+    print("  Generating final summary...")
+    combined = "\n\n".join([f"PART {i+1}: {s}" for i, s in enumerate(summaries)])
+    final_prompt = f"""From the following partial summaries of a book (in order), write a coherent final summary. If there is contradictory information, mention it. Do NOT add anything that is not in the summaries.
 
 {combined}
 
-Resumen final (basado estrictamente en los resúmenes):"""
+Final summary (strictly based on the summaries):"""
     
     timeout = httpx.Timeout(120.0, connect=10.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -326,7 +327,7 @@ Resumen final (basado estrictamente en los resúmenes):"""
         resp = await client.post(f"{OLLAMA_URL}/api/generate", json=payload)
         final_data = resp.json()
     
-    filename = all_chunks[0]["metadata"]["filename"] if all_chunks else "desconocido"
+    filename = all_chunks[0]["metadata"]["filename"] if all_chunks else "unknown"
     
     return JSONResponse(content={
         "file_id": file_id,
@@ -352,7 +353,7 @@ async def list_documents():
             if file_id and file_id not in seen_files:
                 seen_files[file_id] = {
                     "file_id": file_id,
-                    "filename": meta.get('filename', 'desconocido'),
+                    "filename": meta.get('filename', 'unknown'),
                     "chunks": 1
                 }
             elif file_id:
@@ -368,9 +369,9 @@ async def list_documents():
 async def delete_document(file_id: str):
     success = rag.delete_document(COLLECTION_NAME, file_id)
     if success:
-        return JSONResponse(content={"success": True, "message": f"Documento {file_id} eliminado"})
+        return JSONResponse(content={"success": True, "message": f"Document {file_id} deleted"})
     else:
-        raise HTTPException(status_code=404, detail="Documento no encontrado")
+        raise HTTPException(status_code=404, detail="Document not found")
 
 @app.get("/stats")
 async def get_stats():
@@ -399,12 +400,12 @@ async def health_check():
     }
 
 # ============================================================
-# ENDPOINTS DE DEPURACIÓN
+# DEBUG ENDPOINTS
 # ============================================================
 
 @app.get("/debug/chunks/{file_id}")
 async def debug_chunks(file_id: str):
-    """Muestra los chunks almacenados para un file_id"""
+    """Shows chunks stored for a file_id"""
     collection = rag.get_or_create_collection(COLLECTION_NAME)
     results = collection.get(where={"file_id": {"$eq": file_id}})
     
@@ -428,7 +429,7 @@ async def debug_chunks(file_id: str):
 
 @app.post("/debug/search")
 async def debug_search(file_id: str = Form(...), question: str = Form(...)):
-    """Muestra qué chunks encuentra y el prompt que se enviaría"""
+    """Shows which chunks are found and the prompt that would be sent"""
     relevant_chunks = rag.find_relevant_chunks(
         collection_name=COLLECTION_NAME,
         query=question,
@@ -440,7 +441,7 @@ async def debug_search(file_id: str = Form(...), question: str = Form(...)):
         return {
             "question": question,
             "found": False,
-            "message": "No se encontraron chunks relevantes"
+            "message": "No relevant chunks found"
         }
     
     chunks_detail = []
@@ -453,22 +454,22 @@ async def debug_search(file_id: str = Form(...), question: str = Form(...)):
         })
     
     context_text = "\n\n".join([
-        f"[Página {c['metadata']['page']}]: {c['text']}" 
+        f"[Page {c['metadata']['page']}]: {c['text']}" 
         for c in relevant_chunks
     ])
     
-    prompt = f"""Eres un asistente que SOLO responde basándose en el contexto proporcionado.
+    prompt = f"""You are an assistant that ONLY responds based on the provided context.
 
-CONTEXTO DEL DOCUMENTO (ÚNICA FUENTE DE INFORMACIÓN):
+DOCUMENT CONTEXT (ONLY SOURCE OF INFORMATION):
 {context_text}
 
-INSTRUCCIONES ESTRICTAS:
-1. SOLO usa la información del contexto para responder
-2. SI la información no está en el contexto, responde "No encuentro esta información en el texto"
+STRICT INSTRUCTIONS:
+1. ONLY use the context information to respond
+2. IF the information is not in the context, respond with "I couldn't find this information in the text"
 
-PREGUNTA: {question}
+QUESTION: {question}
 
-RESPUESTA:"""
+ANSWER:"""
     
     return {
         "question": question,
@@ -493,7 +494,7 @@ async def debug_embedding(text: str = "Margery Meanwell"):
 
 @app.post("/debug/extract")
 async def debug_extract(file: UploadFile = File(...)):
-    """Muestra cómo se extrae un PDF sin indexarlo"""
+    """Shows how a PDF is extracted without indexing it"""
     file_id = str(uuid.uuid4())
     temp_pdf = os.path.join(UPLOAD_FOLDER, f"{file_id}.pdf")
     content = await file.read()
@@ -522,9 +523,9 @@ async def debug_extract(file: UploadFile = File(...)):
 
 @app.post("/debug/reset")
 async def reset_collection():
-    """Resetea la colección (borra todos los datos)"""
+    """Resets the collection (deletes all data)"""
     success = rag.reset_collection(COLLECTION_NAME)
     if success:
-        return {"message": "Colección reseteada correctamente"}
+        return {"message": "Collection reset successfully"}
     else:
-        return {"error": "No se pudo resetear la colección"}
+        return {"error": "Could not reset collection"}
