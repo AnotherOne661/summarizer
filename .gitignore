@@ -1,0 +1,52 @@
+# Entornos virtuales
+venv/
+env/
+.env
+*.pyc
+__pycache__/
+
+# Datos de ChromaDB (base de datos vectorial)
+chroma_data/
+backend/chroma_data/
+*.chroma.db
+
+# Modelos descargados de Ollama
+ollama/models/
+**/models/
+ollama/entrypoint.sh  # Si es generado, mejor ignorarlo
+*.bin
+*.gguf
+
+# Archivos temporales de PDF
+uploads/
+backend/uploads/
+*.pdf
+*.tmp
+temp_*
+
+# Dependencias de Python (puedes optar por ignorarlas si usas Docker)
+*.egg-info/
+dist/
+build/
+
+# Dependencias de Node (frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/package-lock.json  # Opcional, según prefieras
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Docker (opcional, si no quieres subir imágenes construidas)
+docker-compose.override.yml

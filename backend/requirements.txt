@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+pypdf
+pdf2image
+pytesseract
+pillow
+httpx
+aiofiles
+chromadb
+sentence-transformers
+numpy
+scikit-learn

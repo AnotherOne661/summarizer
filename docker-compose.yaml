@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  ollama:
+    build: ./ollama                    
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "11435:11434"
+    environment:
+      - OLLAMA_MODEL=llama3.2:3b        # Cambiar modelo dependiendo del hw
+    volumes:
+      - ./ollama/models:/root/.ollama    # Persistencia de modelos
+    networks:
+      - app-network
+    # Si tienes GPU NVIDIA, descomenta las siguientes líneas:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    deploy:
+      resources:
+         reservations:
+           devices:
+             - driver: nvidia
+               count: 1
+               capabilities: [gpu]
+
+  backend:
+    build: ./backend
+    container_name: python-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2:3b
+      - UPLOAD_FOLDER=/app/uploads
+    volumes:
+      - uploads:/app/uploads
+      - ./backend/chroma_data:/app/chroma_data  # 👈 Persistencia para ChromaDB
+    depends_on:
+      - ollama
+    networks:
+      - app-network
+  frontend:
+    build: ./frontend
+    container_name: nextjs-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  uploads:
+
+networks:
+  app-network:
+    driver: bridge
