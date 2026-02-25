@@ -1,4 +1,4 @@
-# AI PDF Summarizer (RAG)
+# Another One's AI PDF Summarizer (RAG)
 
 A complete application that allows you to upload PDF documents, extract their content via OCR, and generate intelligent summaries or answer questions about the content using a local language model (Ollama) and semantic search (RAG with ChromaDB).
 
