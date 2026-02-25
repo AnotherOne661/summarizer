@@ -29,7 +29,7 @@ A complete application that allows you to upload PDF documents, extract their co
 
 ### 1. Clone the repository
 ```bash
-git clone <this reposirory>
+git clone https://github.com/AnotherOne661/summarizer.git
 cd summarizer
 ```
 
@@ -63,7 +63,7 @@ deploy:
 
 ### 1. Clone the repository
 ```bash
-git clone <this-repository>
+git clone https://github.com/AnotherOne661/summarizer.git
 cd summarizer
 ```
 ### 2. Run the automatic installation script
