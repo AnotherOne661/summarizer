@@ -22,6 +22,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'upload' | 'summary' | 'qa'>('upload');
   const [darkMode, setDarkMode] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loadingExtract, setLoadingExtract] = useState(false);
 
   // Detect system preference for dark mode
   useEffect(() => {
@@ -107,7 +108,17 @@ export default function Home() {
       
     } catch (error) {
       console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'Error generating summary');
+      // Provide a clearer message if the fetch failed due to network/timeout.
+      if (
+        error instanceof TypeError &&
+        /failed to fetch/i.test(error.message)
+      ) {
+        setError(
+          'Network error: connection was interrupted. The summary may still be generating on the server; you can refresh or try again later.'
+        );
+      } else {
+        setError(error instanceof Error ? error.message : 'Error generating summary');
+      }
     } finally {
       setLoadingSummary(false);
     }
@@ -144,11 +155,65 @@ export default function Home() {
       
     } catch (error) {
       console.error('Error:', error);
-      setError(error instanceof Error ? error.message : 'Error processing question');
+      if (
+        error instanceof TypeError &&
+        /failed to fetch/i.test(error.message)
+      ) {
+        setError(
+          'Network error: connection was interrupted while asking a question. Try again later.'
+        );
+      } else {
+        setError(error instanceof Error ? error.message : 'Error processing question');
+      }
     } finally {
       setLoadingQuestion(false);
     }
   };
+const handleExtractFullText = async () => {
+  if (!fileId) return;
+  
+  setLoadingExtract(true);
+  setError('');
+  
+  try {
+    const res = await fetch(`/api/extract/${fileId}`, {
+      method: 'GET',
+    });
+    
+    // Verificar si la respuesta es JSON
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // Si no es JSON, leer como texto para obtener el mensaje de error
+      const text = await res.text();
+      throw new Error(`Unexpected response: ${text.substring(0, 100)}`);
+    }
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.detail || `Error ${res.status}: ${res.statusText}`);
+    }
+    
+    if (!data.full_text) {
+      throw new Error('No text content in response');
+    }
+    
+    // Crear y descargar archivo
+    const blob = new Blob([data.full_text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `full_text_${filename.replace('.pdf', '')}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+  } catch (error) {
+    console.error('Error extracting full text:', error);
+    setError(error instanceof Error ? error.message : 'Error extracting full text');
+  } finally {
+    setLoadingExtract(false);
+  }
+};
 
   const handleDownloadTxt = () => {
     if (!summary) return;
@@ -288,28 +353,39 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab: Summary */}
+              {/* Tab: Summary */}
         {activeTab === 'summary' && fileId && (
           <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-sm p-10 border border-stone-200 dark:border-zinc-800">
-            <div className="flex justify-between items-center mb-10">
+            <div className="flex justify-between items-center mb-10 flex-wrap gap-4">
               <h2 className="text-2xl font-serif font-bold text-zinc-900 dark:text-white flex items-center gap-3">
                 <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 Executive Summary
               </h2>
-              <div className="flex gap-4">
+              <div className="flex gap-4 flex-wrap">
                 {summary && (
                   <button
                     onClick={handleDownloadTxt}
                     className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 border border-stone-200 dark:border-zinc-800 px-4 py-2 rounded-lg transition-colors"
+                    title="Download summary as text file"
                   >
                     <Download className="w-4 h-4" />
-                    Export
+                    Export Summary
                   </button>
                 )}
+                <button
+                  onClick={handleExtractFullText}
+                  disabled={loadingExtract}
+                  className="flex items-center gap-2 text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 border border-stone-200 dark:border-zinc-800 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Download all short summaries as a text file"
+                >
+                  <FileText className="w-4 h-4" />
+                  {loadingExtract ? 'Downloading...' : 'Download All Summaries'}
+                </button>
                 <button
                   onClick={handleGenerateSummary}
                   disabled={loadingSummary}
                   className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg disabled:bg-stone-300 transition-colors"
+                  title={summary ? 'Regenerate summary' : 'Generate summary from document'}
                 >
                   {loadingSummary ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

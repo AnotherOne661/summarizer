@@ -41,7 +41,7 @@ services:
       - UPLOAD_FOLDER=/app/uploads
     volumes:
       - uploads:/app/uploads
-      - ./backend/chroma_data:/app/chroma_data  # 👈 Persistencia para ChromaDB
+      - ./backend/chroma_data:/app/chroma_data  
     depends_on:
       - ollama
     networks:
