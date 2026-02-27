@@ -361,7 +361,7 @@ async def extract_full_text(file_id: str):
 				content={"detail": "No summaries found for this document. Please generate a summary first."}
 			)
 		full_text = "\n\n".join([
-			f"[Resumen {i+1}]\n{s.strip()}" for i, s in enumerate(summaries)
+			f"[Summary {i+1}]\n{s.strip()}" for i, s in enumerate(summaries)
 		])
 		return JSONResponse(content={
 			"file_id": file_id,

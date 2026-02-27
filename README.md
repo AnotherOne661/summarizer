@@ -115,6 +115,9 @@ summarizer/
 │   │           │       └── route.ts
 │   │           └── ask/
 │   │               └── route.ts
+│   │           └── extract/          
+│   │               └── [file_id]/
+│   │                   └── route.ts
 │   ├── package.json
 │   └── Dockerfile
 ├── ollama/
@@ -155,7 +158,28 @@ summarizer/
 
 * Answers include page references
 
+### 4. Download Full Text [NEW FEATURE] 
+
+* In the "Summary" tab, click "Download Full Text"
+
+* Get the complete extracted text from your PDF with page markers
+
+* Useful for verifying content or further processing
+
 ## Advanced Configuration
+
+### Long Document Support [IMPROVED] 
+
+The system now handles long documents (300+ pages) without timeout issues:
+
+Custom Next.js server with server.timeout = 0 (no connection limits)
+
+Recursive summarization for large documents
+
+Optimized token counting with tiktoken
+
+Better context window management (6000 tokens)
+
 ### Change Ollama Model
 
 In docker-compose.yaml or backend/.env (local):
