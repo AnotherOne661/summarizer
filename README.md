@@ -205,3 +205,27 @@ sudo rm -rf backend/chroma_data
 # Local
 rm -rf backend/chroma_data
 ```
+
+## Troubleshooting
+
+### **Error**: "Headers Timeout Error"
+
+>FIXED - The custom server.js now disables timeouts entirely:
+>javascript
+>
+>server.timeout = 0;
+>server.headersTimeout = 0;
+
+### **Error**: OCR text has no spaces
+
+>FIXED - Added clean_for_display function that:
+>
+>Inserts spaces after periods followed by uppercase
+>
+>Adds spaces between lowercase and uppercase merged words
+>
+>Normalizes whitespace
+
+### **Error**: Summary too short for long documents
+
+>FIXED - Implemented recursive summarization that combines partial summaries intelligently

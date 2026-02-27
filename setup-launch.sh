@@ -289,7 +289,7 @@ sleep 3
 # Iniciar frontend
 echo -e "${BLUE}🎨 Iniciando frontend en http://localhost:3000${NC}"
 cd frontend
-npm run dev &
+npm start &
 FRONTEND_PID=$!
 cd ..
 
