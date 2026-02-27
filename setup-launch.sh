@@ -288,6 +288,7 @@ sleep 3
 
 # Iniciar frontend
 echo -e "${BLUE}🎨 Iniciando frontend en http://localhost:3000${NC}"
+export NODE_ENV=production
 cd frontend
 npm start &
 FRONTEND_PID=$!
